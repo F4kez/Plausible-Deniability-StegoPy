@@ -156,3 +156,56 @@ Install Pillow into your active Python environment:
 ```bash
 pip install pillow
 ```
+
+---
+
+## 7. Cryptographic Security & Password Verification
+
+### Why Made-Up Passwords Cannot Be Seen in the Code
+In StegoPy, **passwords are never saved or hardcoded**. The system operates on a **zero-knowledge cryptographic model**:
+- No passwords are saved in the source code or in any database.
+- No passwords or password hashes are written inside the PNG stego image.
+- Even with full access to the image file and all source code, an attacker cannot reverse-engineer or "read" what password was used.
+
+---
+
+### How the Program Verifies Made-Up Passwords (The Checksum Mechanism)
+
+Instead of comparing your input against a saved password list, StegoPy verifies passwords mathematically using a combination of **Key Derivation (SHA-256 / PBKDF2)** and a **32-bit Cyclical Redundancy Checksum (CRC32)**.
+
+#### 1. During Embedding (Encoding):
+1. **Random Salt Generation**: A unique 32-bit random salt is generated:
+   ```python
+   salt = random.randint(0, 0xffffffff)
+   ```
+2. **Original Fingerprint Calculation**: The engine computes the exact CRC32 checksum of your original secret file bytes before encrypting:
+   ```python
+   expected_crc = zlib.crc32(file_bytes) & 0xffffffff
+   ```
+3. **Stream Encryption**: The made-up password and salt are hashed via SHA-256 to generate an encryption keystream, which encrypts the payload via XOR.
+4. **Header Embedding**: Only the metadata (salt, payload length, and `expected_crc`) and the encrypted payload are embedded into the image pixels. The password itself is immediately discarded from memory.
+
+#### 2. During Extraction (Verification):
+When you attempt to extract the secret:
+1. **Trial Decryption**: The engine reads the salt from the image and applies whatever password you typed to generate a trial keystream and decrypt the payload:
+   ```python
+   trial_payload = xor_crypt(encrypted_payload, trial_keystream)
+   ```
+2. **Mathematical Verification Check**: The engine calculates the CRC32 checksum of the decrypted result:
+   ```python
+   actual_crc = zlib.crc32(trial_payload) & 0xffffffff
+   ```
+3. **The Outcome**:
+   - ❌ **Incorrect Password**: Because AES/stream encryption is avalanche-sensitive, decrypting with even one wrong character produces random mathematical noise. The checksum of this garbage will **never** equal `expected_crc`. The program immediately rejects it:  
+     `"Incorrect password! Checksum verification failed."`
+   - ✅ **Correct Password**: The trial payload decrypts into the exact original file bit-for-bit. `actual_crc == expected_crc` matches with 100% precision, confirming identity and data integrity without ever storing the password.
+
+---
+
+### Plausible Deniability (Dual-Layer Separation)
+
+Under duress mode, the carrier image contains two entirely separate layers:
+- **Bit Plane 0 (Decoy)**: Encrypted with the Decoy Password + Decoy Salt + Decoy CRC32.
+- **Bit Plane 1 (True Secret)**: Encrypted with the True Secret Password + True Secret Salt + True Secret CRC32.
+
+An adversary who forces you to reveal your password will only receive the Decoy Password. Because both layers are encrypted into pseudo-random noise, statistical analysis cannot prove whether a second secret layer exists.
