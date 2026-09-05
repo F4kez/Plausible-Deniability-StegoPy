@@ -209,3 +209,16 @@ Under duress mode, the carrier image contains two entirely separate layers:
 - **Bit Plane 1 (True Secret)**: Encrypted with the True Secret Password + True Secret Salt + True Secret CRC32.
 
 An adversary who forces you to reveal your password will only receive the Decoy Password. Because both layers are encrypted into pseudo-random noise, statistical analysis cannot prove whether a second secret layer exists.
+
+---
+
+## 8. Author & Legal Copyright
+
+**Copyright FAKEZ (<fakeztua@gmail.com>). All Rights Reserved.**
+
+This project and its proprietary source code, algorithms, visual steganography workflows, and documentation are the exclusive intellectual property of **Ahmad Zaim**.
+
+- **No Unauthorized Duplication**: You may not copy, clone, mirror, re-license, or redistribute this software in whole or in part without explicit written authorization.
+- **No Commercial Exploitation**: Commercial use, sublicensing, or redistribution for profit is strictly prohibited.
+- **Infringement Notice**: Any unauthorized distribution or plagiarism of this codebase is subject to international copyright infringement claims and DMCA takedown actions.
+
