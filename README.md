@@ -1,0 +1,158 @@
+# StegoPy - LSB Image Steganography System
+
+A steganography web application and CLI engine that conceals sensitive files (PDF, DOCX, TXT, images) inside lossless PNG carriers with **Plausible Deniability** (Decoy + True Secret layers) and a visual pixel inspector with 80× amplified difference heatmaps.
+
+---
+
+## 1. Prerequisites
+
+Make sure you have the following installed on your machine:
+
+- **Node.js**: v18.0.0 or higher ([Download Node.js](https://nodejs.org/))
+- **Python**: 3.8 or higher ([Download Python](https://www.python.org/))
+- **Pillow (Python Imaging Library)**:
+  ```bash
+  pip install pillow
+  ```
+
+---
+
+## 2. Installation & Setup
+
+1. Open your terminal in the project root directory.
+2. Install the Node.js dependencies:
+   ```bash
+   npm install
+   ```
+3. Ensure Python and Pillow are working:
+   ```bash
+   python -c "from PIL import Image; print('Pillow is ready!')"
+   ```
+   *(On macOS or Linux, use `python3` instead of `python`).*
+
+---
+
+## 3. Running the Web Application
+
+### Option A: Development Mode (Recommended for testing & development)
+Starts the Vite development server with TypeScript support and hot-reload.
+
+```bash
+npm run dev
+```
+Open your browser at: **`http://localhost:3000`**
+
+---
+
+### Option B: Production Build & Start
+Compiles the React frontend into static assets and bundles the backend server into `dist/server.cjs`.
+
+1. **Build the application:**
+   ```bash
+   npm run build
+   ```
+
+2. **Start the production server:**
+   ```bash
+   npm start
+   ```
+
+*Note: If your dev server (`npm run dev`) is already running on port 3000, the production server will automatically detect it and bind to **`http://localhost:3001`** to avoid port collisions.*
+
+---
+
+## 4. Running the Standalone Python Engine (CLI)
+
+You can also run the core steganography engine directly from the command line without starting the web server.
+
+### A. Check Carrier Image Capacity
+```bash
+python stego_engine.py info --image public/samples/sample_cover_cyber.png
+```
+
+### B. Hide a Single Secret File
+```bash
+python stego_engine.py hide \
+  --cover public/samples/sample_cover_cyber.png \
+  --secret public/samples/secret.pdf \
+  --password "MySecretPass123" \
+  --output stego.png
+```
+
+### C. Hide with Plausible Deniability (True Secret + Decoy)
+```bash
+python stego_engine.py hide \
+  --cover public/samples/sample_cover_cyber.png \
+  --secret public/samples/secret.pdf \
+  --password "TrueSecretPass" \
+  --deniability \
+  --decoy public/samples/secret.txt \
+  --decoy-password "DecoyPass" \
+  --output stego.png
+```
+
+### D. Extract Data Under Decoy Password (Duress)
+```bash
+python stego_engine.py extract \
+  --stego stego.png \
+  --output-dir extracted_decoy \
+  --password "DecoyPass"
+```
+
+### E. Extract the True Secret
+```bash
+python stego_engine.py extract \
+  --stego stego.png \
+  --output-dir extracted_true \
+  --password "TrueSecretPass"
+```
+
+### F. Generate 80× Difference Heatmap
+```bash
+python stego_engine.py diff \
+  --cover public/samples/sample_cover_cyber.png \
+  --stego stego.png \
+  --output diff.png \
+  --amplify 80
+```
+
+---
+
+## 5. Project Directory Structure
+
+```text
+├── server.ts             # Express backend server (handles uploads, runs Python child processes)
+├── stego_engine.py       # Standalone Python LSB Steganography engine
+├── package.json          # Node scripts and dependencies
+├── src/                  # React Frontend
+│   ├── App.tsx           # Main application view with live stats & navigation
+│   ├── components/       # UI sub-components (Hide, Extract, Inspector, Visualizer)
+│   └── types.ts          # TypeScript interfaces
+├── public/               # Sample images and carrier files
+├── uploads/              # Temporary storage for uploaded files
+└── outputs/              # Generated stego images, diff maps, and extracted files
+```
+
+---
+
+## 6. Troubleshooting
+
+### Port Already In Use (`EADDRINUSE: 3000`)
+If port 3000 is occupied by a background process:
+- **Windows PowerShell:**
+  ```powershell
+  taskkill /F /IM node.exe
+  ```
+- **Linux / macOS:**
+  ```bash
+  killall node
+  ```
+Or run the production server with an explicit port:
+- **PowerShell:** `$env:PORT="3001"; npm start`
+- **Linux/macOS:** `PORT=3001 npm start`
+
+### `ModuleNotFoundError: No module named 'PIL'`
+Install Pillow into your active Python environment:
+```bash
+pip install pillow
+```

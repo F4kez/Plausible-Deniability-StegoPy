@@ -1,0 +1,6 @@
+{
+  "name": "StegoPy - Python Steganography Tool",
+  "description": "A Python-powered image steganography software to hide secret text, documents (PDF, DOC), and images inside cover images using LSB encoding and Pillow.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
