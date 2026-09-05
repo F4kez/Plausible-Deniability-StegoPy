@@ -205,6 +205,12 @@ export const ExtractWorkflow: React.FC<ExtractWorkflowProps> = ({ initialStegoUr
               placeholder="e.g. decoy123 or trueSecret456"
               className="w-full px-3 py-2 text-xs font-mono rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
             />
+            {password && password.length < 8 && (
+              <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <span>Tip: Passwords created under the security policy are 8+ characters (with letters &amp; numbers).</span>
+              </div>
+            )}
           </div>
 
           {/* Optional Layer Selector */}

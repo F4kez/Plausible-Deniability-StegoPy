@@ -211,9 +211,41 @@ app.post(
       const outputId = `stego_${Date.now()}_${finalOutputName}`;
       const outputPath = path.join(OUTPUT_DIR, outputId);
 
-      const password = req.body.password || '';
-      const decoyPassword = req.body.decoyPassword || '';
+      const password = (req.body.password || '').trim();
+      const decoyPassword = (req.body.decoyPassword || '').trim();
       const bits = req.body.bits ? req.body.bits.toString() : '1';
+
+      // Enforce Password Security Policy (NIST SP 800-63B: min 8 chars, letter, number)
+      const validatePasswordRules = (pwd: string, fieldName: string) => {
+        if (!pwd) return null;
+        if (pwd.length < 8) return `${fieldName} must be at least 8 characters long.`;
+        if (!/[a-zA-Z]/.test(pwd)) return `${fieldName} must contain at least one letter.`;
+        if (!/\d/.test(pwd)) return `${fieldName} must contain at least one number.`;
+        return null;
+      };
+
+      const secretErr = validatePasswordRules(password, 'True Secret Password');
+      if (secretErr) {
+        return res.status(400).json({ error: secretErr });
+      }
+
+      if (deniabilityMode) {
+        if (!password) {
+          return res.status(400).json({ error: 'True Secret Password is required in Plausible Deniability mode.' });
+        }
+        if (!decoyPassword) {
+          return res.status(400).json({ error: 'Decoy Password is required in Plausible Deniability mode.' });
+        }
+        const decoyErr = validatePasswordRules(decoyPassword, 'Decoy Password');
+        if (decoyErr) {
+          return res.status(400).json({ error: decoyErr });
+        }
+        if (password === decoyPassword) {
+          return res.status(400).json({
+            error: 'True Secret Password and Decoy Password cannot be identical. Distinct passwords are required for mathematical separation.',
+          });
+        }
+      }
 
       const pyArgs = [
         'hide',

@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { SampleCover, SampleSecret, CoverInfo, StegoResult } from '../types';
 import { VisualInspector } from './VisualInspector';
+import { PasswordRequirementMeter } from './PasswordRequirementMeter';
+import { evaluatePassword } from '../utils/passwordPolicy';
 
 interface HideWorkflowProps {
   onSwitchToExtract: (stegoDownloadUrl: string) => void;
@@ -68,6 +70,16 @@ export const HideWorkflow: React.FC<HideWorkflowProps> = ({ onSwitchToExtract })
   const [processing, setProcessing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [stegoResult, setStegoResult] = useState<StegoResult | null>(null);
+
+  // Password Security Policy Evaluation
+  const secretEval = evaluatePassword(secretPassword.trim(), deniabilityMode);
+  const decoyEval = evaluatePassword(decoyPassword.trim(), deniabilityMode);
+  const arePasswordsIdentical =
+    deniabilityMode &&
+    secretPassword.trim().length > 0 &&
+    secretPassword.trim() === decoyPassword.trim();
+  const hasPasswordBlocker =
+    !secretEval.isValid || (deniabilityMode && (!decoyEval.isValid || arePasswordsIdentical));
 
   const coverInputRef = useRef<HTMLInputElement>(null);
   const secretInputRef = useRef<HTMLInputElement>(null);
@@ -141,9 +153,42 @@ export const HideWorkflow: React.FC<HideWorkflowProps> = ({ onSwitchToExtract })
 
   // Run Stego Hiding Execution
   const handleRunStego = async () => {
-    setProcessing(true);
     setError(null);
     setStegoResult(null);
+
+    // Enforce Password Security Policy
+    const trimmedSecretPass = secretPassword.trim();
+    const trimmedDecoyPass = decoyPassword.trim();
+
+    if (trimmedSecretPass) {
+      const secretCheck = evaluatePassword(trimmedSecretPass, false);
+      if (!secretCheck.isValid) {
+        setError(`True Secret Password: ${secretCheck.errorMessage}`);
+        return;
+      }
+    }
+
+    if (deniabilityMode) {
+      if (!trimmedSecretPass) {
+        setError('Plausible Deniability mode requires a True Secret Password (min 8 chars, with letters and numbers).');
+        return;
+      }
+      if (!trimmedDecoyPass) {
+        setError('Plausible Deniability mode requires a Decoy Password (min 8 chars, with letters and numbers).');
+        return;
+      }
+      const decoyCheck = evaluatePassword(trimmedDecoyPass, true);
+      if (!decoyCheck.isValid) {
+        setError(`Decoy Password: ${decoyCheck.errorMessage}`);
+        return;
+      }
+      if (trimmedSecretPass === trimmedDecoyPass) {
+        setError('Plausible Deniability Security Conflict: True Secret Password and Decoy Password cannot be identical.');
+        return;
+      }
+    }
+
+    setProcessing(true);
 
     try {
       const formData = new FormData();
@@ -549,8 +594,14 @@ export const HideWorkflow: React.FC<HideWorkflowProps> = ({ onSwitchToExtract })
                   type="text"
                   value={secretPassword}
                   onChange={(e) => setSecretPassword(e.target.value)}
-                  placeholder="Password for true secret"
+                  placeholder="Password for true secret (min 8 chars, letters & numbers)"
                   className="w-full px-2.5 py-1.5 text-xs font-mono rounded-lg border border-rose-300 bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/30 text-rose-950 font-semibold"
+                />
+                <PasswordRequirementMeter
+                  password={secretPassword}
+                  label={deniabilityMode ? "Layer 2 Password Requirements" : "Encryption Password Policy"}
+                  isRequired={deniabilityMode}
+                  accentColor="rose"
                 />
               </div>
             </div>
@@ -656,9 +707,21 @@ export const HideWorkflow: React.FC<HideWorkflowProps> = ({ onSwitchToExtract })
                     type="text"
                     value={decoyPassword}
                     onChange={(e) => setDecoyPassword(e.target.value)}
-                    placeholder="Password to give under duress"
+                    placeholder="Password to give under duress (min 8 chars, letters & numbers)"
                     className="w-full px-2.5 py-1.5 text-xs font-mono rounded-lg border border-amber-300 bg-white focus:outline-none text-amber-950 font-semibold"
                   />
+                  <PasswordRequirementMeter
+                    password={decoyPassword}
+                    label="Layer 1 Decoy Password Requirements"
+                    isRequired={true}
+                    accentColor="amber"
+                  />
+                  {arePasswordsIdentical && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-amber-900 bg-amber-100 border border-amber-300 rounded-lg p-2 font-medium">
+                      <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
+                      <span>Security Conflict: True Secret Password and Decoy Password cannot be identical. Plausible Deniability requires distinct passwords!</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -729,6 +792,16 @@ export const HideWorkflow: React.FC<HideWorkflowProps> = ({ onSwitchToExtract })
               )}
             </div>
 
+            {/* Password Validation Notice */}
+            {hasPasswordBlocker && !error && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2 text-xs text-amber-800">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <span>
+                  Please ensure password requirements in Step 2 are satisfied (minimum 8 characters with letters &amp; numbers).
+                </span>
+              </div>
+            )}
+
             {/* Error Banner */}
             {error && (
               <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2 text-xs text-rose-700">
@@ -743,17 +816,24 @@ export const HideWorkflow: React.FC<HideWorkflowProps> = ({ onSwitchToExtract })
                 type="button"
                 id="btn-run-stego"
                 onClick={handleRunStego}
-                disabled={processing}
-                className={`w-full py-3 px-4 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-sm transition-all ${
+                disabled={processing || hasPasswordBlocker}
+                className={`w-full py-3 px-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 shadow-sm transition-all ${
                   processing
-                    ? 'bg-slate-400 cursor-not-allowed'
-                    : 'bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] shadow-emerald-600/20'
+                    ? 'bg-slate-400 text-white cursor-not-allowed'
+                    : hasPasswordBlocker
+                    ? 'bg-slate-200 text-slate-500 cursor-not-allowed border border-slate-300'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white active:scale-[0.99] shadow-emerald-600/20'
                 }`}
               >
                 {processing ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
                     <span>Python Pillow Engine Running...</span>
+                  </>
+                ) : hasPasswordBlocker ? (
+                  <>
+                    <Lock className="w-4 h-4 text-slate-400" />
+                    <span>Satisfy Password Policy to Generate</span>
                   </>
                 ) : (
                   <>
@@ -773,6 +853,8 @@ export const HideWorkflow: React.FC<HideWorkflowProps> = ({ onSwitchToExtract })
           stegoResult={stegoResult}
           coverUrl={coverPreviewUrl}
           onSwitchToExtract={onSwitchToExtract}
+          secretPassword={secretPassword}
+          decoyPassword={deniabilityMode ? decoyPassword : undefined}
         />
       )}
     </div>
