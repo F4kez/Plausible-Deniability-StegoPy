@@ -1,3 +1,13 @@
+# ==============================================================================
+# StegoPy - LSB Image Steganography Engine
+# Copyright (c) 2025-2026 Ahmad Zaim <ahmadzaim.gkg@gmail.com>. All Rights Reserved.
+#
+# NOTICE: All source code, steganographic architectures, and key-derivation algorithms 
+# contained herein are the proprietary intellectual property of Ahmad Zaim. 
+# Unauthorized copying, reverse engineering, publication, or redistribution is 
+# strictly prohibited without explicit written permission.
+# ==============================================================================
+
 import os
 import sys
 import json

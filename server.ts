@@ -1,3 +1,13 @@
+/**
+ * ==============================================================================
+ * StegoPy - LSB Image Steganography System & Server
+ * Copyright (c) 2025-2026 Ahmad Zaim <ahmadzaim.gkg@gmail.com>. All Rights Reserved.
+ *
+ * NOTICE: Proprietary software. Unauthorized reproduction, modification, 
+ * or distribution is strictly prohibited.
+ * ==============================================================================
+ */
+
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
@@ -33,27 +43,61 @@ const upload = multer({
 
 app.use(express.json());
 
-// Helper function to execute stego_engine.py
-function runPythonStego(args: string[]): Promise<any> {
-  return new Promise((resolve, reject) => {
-    const scriptPath = path.join(process.cwd(), 'stego_engine.py');
-    execFile('python', [scriptPath, ...args], { maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
-      if (err) {
-        try {
-          const parsed = JSON.parse(stdout || stderr);
-          return reject(new Error(parsed.error || stderr || err.message));
-        } catch {
-          return reject(new Error(stderr || stdout || err.message));
-        }
+// Helper function to execute stego_engine.py across Windows/macOS/Linux
+async function runPythonStego(args: string[]): Promise<any> {
+  const scriptPath = path.join(process.cwd(), 'stego_engine.py');
+  const candidates = [
+    process.env.PYTHON_PATH,
+    process.platform === 'win32' ? 'py' : 'python3',
+    'python',
+    'python3',
+  ].filter(Boolean) as string[];
+
+  let lastError: any = null;
+
+  for (const cmd of candidates) {
+    try {
+      return await new Promise((resolve, reject) => {
+        execFile(cmd, [scriptPath, ...args], { maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
+          const combined = (stdout || '') + ' ' + (stderr || '');
+          if (combined.includes('Microsoft Store') || combined.includes('App execution aliases')) {
+            return reject(new Error(`Windows Store Alias caught for '${cmd}'. Retrying with fallback...`));
+          }
+          if (err) {
+            try {
+              const parsed = JSON.parse(stdout || stderr);
+              return reject(new Error(parsed.error || stderr || err.message));
+            } catch {
+              return reject(new Error(stderr || stdout || err.message));
+            }
+          }
+          try {
+            const parsed = JSON.parse(stdout.trim());
+            resolve(parsed);
+          } catch {
+            reject(new Error(`Failed to parse Python output: ${stdout}\n${stderr}`));
+          }
+        });
+      });
+    } catch (err: any) {
+      lastError = err;
+      // If the error was stego logic (e.g. invalid password, capacity exceeded), throw it immediately
+      const errMsg = err?.message || '';
+      if (
+        !errMsg.includes('Microsoft Store') &&
+        !errMsg.includes('ENOENT') &&
+        !errMsg.includes('not found') &&
+        !errMsg.includes('is not recognized')
+      ) {
+        throw err;
       }
-      try {
-        const parsed = JSON.parse(stdout.trim());
-        resolve(parsed);
-      } catch (parseErr) {
-        reject(new Error(`Failed to parse Python output: ${stdout}\n${stderr}`));
-      }
-    });
-  });
+    }
+  }
+
+  throw new Error(
+    lastError?.message ||
+      'Python was not found. Please ensure Python is installed and added to PATH, or turn off App Execution Aliases in Windows Settings.'
+  );
 }
 
 // 1. Health check
@@ -196,6 +240,14 @@ app.post(
       }
 
       const result = await runPythonStego(pyArgs);
+
+      console.log(`\n======================================================`);
+      console.log(`[StegoPy] Stego Image Created: ${finalOutputName}`);
+      console.log(`  -> True Secret Password: "${password || '(none)'}"`);
+      if (deniabilityMode) {
+        console.log(`  -> Decoy Password (Duress): "${decoyPassword || '(none)'}"`);
+      }
+      console.log(`======================================================\n`);
 
       // Also generate amplified difference map for visualization!
       const diffId = `diff_${Date.now()}.png`;

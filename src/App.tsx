@@ -27,10 +27,10 @@ export default function App() {
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-slate-700">StegoPy Tool</span>
-            <span>&bull;</span>
-            <span>Python 3.10 LSB Steganography Engine with Pillow (PIL)</span>
+          <div className="flex flex-col sm:flex-row items-center gap-2">
+            <span className="font-semibold text-slate-700">&copy; 2025&ndash;2026 FAKEZ. All rights reserved.</span>
+            <span className="hidden sm:inline">&bull;</span>
+            <span>StegoPy LSB Steganography Engine (Pillow)</span>
           </div>
           <div className="flex items-center gap-4 text-slate-400">
             <span>Text (.txt)</span>
