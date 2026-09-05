@@ -216,7 +216,7 @@ An adversary who forces you to reveal your password will only receive the Decoy 
 
 **Copyright FAKEZ (<fakeztua@gmail.com>). All Rights Reserved.**
 
-This project and its proprietary source code, algorithms, visual steganography workflows, and documentation are the exclusive intellectual property of **Ahmad Zaim**.
+This project and its proprietary source code, algorithms, visual steganography workflows, and documentation are the exclusive intellectual property of **FAKEZ**.
 
 - **No Unauthorized Duplication**: You may not copy, clone, mirror, re-license, or redistribute this software in whole or in part without explicit written authorization.
 - **No Commercial Exploitation**: Commercial use, sublicensing, or redistribution for profit is strictly prohibited.
